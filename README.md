@@ -114,3 +114,13 @@ The application can be deployed on any platform that supports Next.js (e.g., Ver
 
 ## License
 This project is licensed under the MIT License.
+
+
+### Planned UI library component TBD
+
+installation
+
+```bash
+npx shadcn@latest init
+```
+documentation https://ui.shadcn.com/docs/installation/next
