@@ -102,8 +102,11 @@ The application can be deployed on any platform that supports Next.js (e.g., Ver
 
 ## Roadmap
 - UI component library setup (shadcn/ui).
-- Enhanced analytics and reporting.
-- User authentication and access controls.
+```bash
+npx shadcn@latest init
+```
+Documentation: https://ui.shadcn.com/docs/installation/next
+- Restaurant field validation
 
 ## Contributing
 1. Fork the repository.
@@ -116,11 +119,4 @@ The application can be deployed on any platform that supports Next.js (e.g., Ver
 This project is licensed under the MIT License.
 
 
-### Planned UI library component TBD
 
-installation
-
-```bash
-npx shadcn@latest init
-```
-documentation https://ui.shadcn.com/docs/installation/next
