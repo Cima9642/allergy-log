@@ -130,9 +130,11 @@ export default function Home() {
 
   const handleRealtimeSearch = (query: string): void => {
     setSearchQuery(query);
+
+    const trimmedQuery = query.trim();
     
     // If search is empty, clear everything immediately
-    if (!query.trim()) {
+    if (!trimmedQuery) {
       setSearchResults([]);
       setAllResults([]);
       setSearchMessage('');
@@ -151,7 +153,7 @@ export default function Home() {
       
       try {
         const response = await fetch(
-          `/api/restaurants/search?name=${encodeURIComponent(query)}`
+          `/api/restaurants/search?name=${encodeURIComponent(trimmedQuery)}`
         );
         
         const data: ApiResponse<RestaurantWithRisk[]> = await response.json();
@@ -393,7 +395,7 @@ export default function Home() {
                   >
                     {/* Restaurant Name */}
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {restaurant.name}
+                      {restaurant.name || 'Unnamed Restaurant'}
                     </h3>
                     
                     {/* Oil Type */}
