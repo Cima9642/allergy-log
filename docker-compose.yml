@@ -1,0 +1,72 @@
+# ============= DOCKER COMPOSE CONFIGURATION =============
+version: '3.8'
+
+services:
+  
+  # ===== MONGODB DATABASE =====
+  mongodb:
+    image: mongo:7.0-alpine
+    container_name: allergy-mongodb
+    
+    ports:
+      - "27017:27017"
+    
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: restaurant-tracker
+    
+    volumes:
+      - database-data:/data/db
+    
+    networks:
+      - allergy-network
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ===== NEXT.JS APPLICATION =====
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    container_name: allergy-app
+    
+    ports:
+      - "3000:3000"
+    
+    environment:
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/restaurant-tracker?authSource=admin
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+    
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    
+    networks:
+      - allergy-network
+    
+    restart: unless-stopped
+
+# ===== VOLUMES =====
+volumes:
+  database-data:
+    driver: local
+
+# ===== NETWORKS =====
+networks:
+  allergy-network:
+    driver: bridge
