@@ -1,0 +1,172 @@
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+.env.docker
+
+# AWS
+.aws/
+.aws/credentials
+.aws/config
+
+# SSH keys & certificates
+*.pem
+.ssh/
+*.key
+*.pub
+
+# API keys and tokens
+.api_keys
+.tokens
+secrets.json
+secrets.yml
+
+# Database credentials
+.database_credentials
+.db_credentials
+.dbpass
+database.conf
+
+# Version control
+.git/
+.gitignore
+.DS_Store
+Thumbs.db
+*.log
+*.sqlite3
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.gitattributes
+.github
+.gitlab-ci.yml
+.gitmodules
+.bitbucket/
+
+
+# PACKAGE MANAGERS 
+
+node_modules
+npm-debug.log
+npm-error.log
+yarn.lock
+yarn-error.log
+pnpm-lock.yaml
+.pnpm-store
+.npm
+.npmrc
+.yarnrc
+
+# BUILD & ARTIFACTS 
+
+.next
+dist
+build
+out
+coverage
+
+# Turbopack/Next.js cache
+.turbopack
+.swc
+
+#  Development & IDE 
+
+.vscode
+.idea
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+desktop.ini
+
+# Editor backups
+*.swp
+*.swo
+*~
+*.bak
+*.backup
+*.tmp
+
+# TESTING
+
+__tests__
+jest.config.js
+.jest
+.coverage
+coverage/
+cypress/
+cypress.config.js
+*.spec.ts
+*.spec.tsx
+*.test.ts
+*.test.tsx
+
+# DOCUMENTATION
+
+
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+docs/
+.docs/
+*.md
+
+# LOG FILES
+logs/
+*.log
+*.logs
+lerna-debug.log
+
+# DOCKER RELATED 
+
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore
+
+# CI/CD 
+.github/
+.gitlab/
+.circleci/
+.travis.yml
+appveyor.yml
+azure-pipelines.yml
+Jenkinsfile
+
+# Misc
+.cache
+.eslintcache
+.stylelintcache
+.env.example
+.prettierignore
+.editorconfig
+vercel.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+.tmp/
+
+# Node stuff
+.npm
+.node-gyp
+
+# OS-specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+local_data/
