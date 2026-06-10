@@ -22,12 +22,13 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN npm ci --only=production
+RUN npm ci
 
 COPY --from=builder /app/.next ./.next
 
 # Copy public files
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.ts ./
 
 EXPOSE 3000
 

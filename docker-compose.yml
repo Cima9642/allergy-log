@@ -1,11 +1,9 @@
-# ============= DOCKER COMPOSE CONFIGURATION =============
-version: '3.8'
 
 services:
   
   # ===== MONGODB DATABASE =====
   mongodb:
-    image: mongo:7.0-alpine
+    image: mongo:7.0
     container_name: allergy-mongodb
     
     ports:
@@ -44,17 +42,17 @@ services:
     
     environment:
       MONGODB_URI: mongodb://admin:password@mongodb:27017/restaurant-tracker?authSource=admin
-      NODE_ENV: development
+      NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://localhost:3000
     
     depends_on:
       mongodb:
         condition: service_healthy
     
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
+    develop:
+      watch:
+        - path: ./
+          action: rebuild
     
     networks:
       - allergy-network
