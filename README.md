@@ -71,6 +71,25 @@ npm run dev
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Docker (new)
+
+This project includes a `Dockerfile` and `docker-compose.yml` for containerized development and deployment. Use Docker to run the app and (optionally) a MongoDB service locally without installing Node or MongoDB on your host.
+
+- Build the image and run with Docker:
+
+```bash
+docker build -t allergy-log:local .
+docker run --env MONGODB_URI="${MONGODB_URI}" -p 3000:3000 allergy-log:local
+```
+
+- Start with Docker Compose (recommended for local development):
+
+```bash
+docker-compose up --build
+```
+
+By default the app listens on port `3000`. When using `docker-compose`, the compose file will map ports and provide a MongoDB service if configured.
+
 ## API Reference
 
 ### Create a restaurant
@@ -97,8 +116,19 @@ npm run start   # Start production server
 npm run lint    # Run ESLint
 ```
 
+Docker-related scripts (optional):
+
+```bash
+# build image: docker build -t allergy-log:local .
+# run compose: docker-compose up --build
+# detach: docker-compose up -d --build
+# stop: docker-compose down
+```
+
 ## Deployment
-The application can be deployed on any platform that supports Next.js (e.g., Vercel, Render, or a custom Node.js server). Ensure that `MONGODB_URI` is configured in your deployment environment.
+The application can be deployed on any platform that supports Next.js (e.g., Vercel, Render, or a custom Node.js server). It can also be containerized using the provided `Dockerfile` and `docker-compose.yml` for platforms that accept Docker images (e.g., Docker Hub, AWS ECS, Azure Container Instances).
+
+When deploying with Docker, ensure `MONGODB_URI` is provided as an environment variable to the container (or defined in your orchestration platform's secret manager).
 
 ## Roadmap
 - UI component library setup (shadcn/ui).
