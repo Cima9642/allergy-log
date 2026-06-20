@@ -1,43 +1,52 @@
 import mongoose from 'mongoose';
 
-// Define the array of oil types
-const OIL_TYPES = [
-    'Peanut',
-    'Canola',
-    'Vegetable',
-    'Olive',
-    'Coconut',
-    'Sunflower',
-    'Sesame',
-    'Avocado',
-    'Grapeseed',
-    'Walnut',
-    'Almond',
-    'Corn',
-    'Soybean',
-    'Mixed/Other'
-];
+const OIL_TYPES = ['Peanut','Canola','Vegetable','Olive','Coconut','Sunflower','Sesame','Avocado','Grapeseed','Walnut','Almond','Corn','Soybean','Mixed/Other'];
 
 const restaurantSchema = new mongoose.Schema({
-    name: {
+  name: { 
+    type: String, 
+    required: [true, 'Restaurant name is required'], 
+    trim: true,
+    lowercase: true,
+    index: true
+  },
+  
+  // ===== VERIFICATION VOTES =====
+  votes: [
+    {
+      oilType: {
         type: String,
-        required: [true, 'Restaurant name is required'],
-        trim: true,
-    },
-    oilType: {
+        enum: OIL_TYPES,
+        required: true
+      },
+      ipAddress: {
         type: String,
-        required: [true, 'Oil type is required'],
-        enum: {
-            values: OIL_TYPES,
-            message: '{VALUE} is not a valid oil type'
-        }
-    },
-    submittedDate: {
+        required: true
+      },
+      timestamp: {
         type: Date,
-        default: Date.now,
+        default: Date.now
+      }
     }
-}, {
-    timestamp: true
-});
+  ],
+  
+  // ===== VERIFICATION STATUS =====
+  verified: {
+    type: Boolean,
+    default: false
+  },
+  
+  // ===== CONSENSUS OIL TYPE =====
+  consensusOilType: {
+    type: String,
+    enum: OIL_TYPES
+  },
+  
+  // ===== TIMESTAMPS =====
+  submittedDate: { 
+    type: Date, 
+    default: Date.now 
+  }
+}, { timestamps: true });
 
 export default mongoose.models.Restaurant || mongoose.model('Restaurant', restaurantSchema);
