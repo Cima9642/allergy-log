@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react'; // ← ADDED: useEffect and useRef for debouncing
+import { useState, useEffect, useRef } from 'react';
 
 // ============= TYPE DEFINITIONS =============
 interface Restaurant {
@@ -10,6 +10,10 @@ interface Restaurant {
   __v?: number;
   createdAt?: string;
   updatedAt?: string;
+  verified?: boolean;
+  voteCount?: number;
+  verificationStatus?: string;
+  verificationBadge?: string;
 }
 
 interface RestaurantWithRisk extends Restaurant {
@@ -59,14 +63,17 @@ export default function Home() {
   // ===== SEARCH STATES =====
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<RestaurantWithRisk[]>([]);
-  const [allResults, setAllResults] = useState<RestaurantWithRisk[]>([]); // ← NEW: Stores all results before filtering
-  const [riskFilter, setRiskFilter] = useState<string>('all'); // ← NEW: Tracks selected risk filter
+  const [allResults, setAllResults] = useState<RestaurantWithRisk[]>([]);
+  const [riskFilter, setRiskFilter] = useState<string>('all');
 
   // ===== UI STATES =====
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [submittedMessage, setSubmitMessage] = useState<string>('');
   const [searchMessage, setSearchMessage] = useState<string>('');
+
+  // ===== DEBOUNCE REFERENCE =====
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // ===== HELPER FUNCTIONS =====
   const getRiskClasses = (color: string): string => {
@@ -89,64 +96,62 @@ export default function Home() {
   };
 
   // ===== FORM SUBMIT HANDLER =====
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!name.trim() || !oilType) {
-      setSubmitMessage('Please fill in all fields.');
-      return;
-    }
-
     setIsSubmitting(true);
-    setSubmitMessage('');
 
     try {
       const response = await fetch('/api/restaurants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), oilType: oilType })
+        body: JSON.stringify({ name, oilType })
       });
-      
-      const data: ApiResponse<Restaurant> = await response.json();
+
+      const data = await response.json();
 
       if (data.success) {
-        setSubmitMessage('Restaurant submitted successfully!');
+        // Show success message with custom message from API
+        setSubmitMessage(data.message || 'Restaurant submitted successfully!');
+        
+        // Clear form
         setName('');
         setOilType('');
+        
+        // Hide message after 5 seconds
+        setTimeout(() => setSubmitMessage(''), 5000);
       } else {
-        setSubmitMessage(`Error: ${data.error}`);
+        setSubmitMessage(`❌ Error: ${data.error}`);
+        setTimeout(() => setSubmitMessage(''), 5000);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setSubmitMessage(`Error: ${errorMessage}`);
+      setSubmitMessage('❌ Failed to submit restaurant');
+      setTimeout(() => setSubmitMessage(''), 5000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ===== REAL-TIME SEARCH HANDLER (NEW) =====
-  // This replaces the old handleSearch that required a form submit
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null); // ← NEW: Stores timeout reference for debouncing
-
+  // ===== REAL-TIME SEARCH HANDLER =====
   const handleRealtimeSearch = (query: string): void => {
     setSearchQuery(query);
 
     const trimmedQuery = query.trim();
     
-    // If search is empty, clear everything immediately
+    // If search is empty, clear everything
     if (!trimmedQuery) {
       setSearchResults([]);
       setAllResults([]);
       setSearchMessage('');
+      setRiskFilter('all');
       return;
     }
     
-    // Clear any existing timeout (prevents search on every keystroke)
+    // Clear any existing timeout
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current);
     }
     
-    // Set new timeout - only searches after user stops typing for 300ms
+    // Set new timeout - searches after 300ms of inactivity
     debounceTimeout.current = setTimeout(async () => {
       setIsSearching(true);
       setSearchMessage('');
@@ -159,8 +164,8 @@ export default function Home() {
         const data: ApiResponse<RestaurantWithRisk[]> = await response.json();
         
         if (data.success && data.data) {
-          setAllResults(data.data); // ← NEW: Store unfiltered results
-          setSearchResults(data.data); // Display all results initially
+          setAllResults(data.data);
+          setSearchResults(data.data);
           
           if (data.data.length === 0) {
             setSearchMessage('No restaurants found');
@@ -180,29 +185,25 @@ export default function Home() {
       } finally {
         setIsSearching(false);
       }
-    }, 300); // ← 300ms delay (debounce time)
+    }, 300);
   };
 
-  // ===== RISK FILTER HANDLER (NEW) =====
-  // Filters the search results by selected risk level
+  // ===== RISK FILTER HANDLER =====
   const handleRiskFilterChange = (filter: string): void => {
     setRiskFilter(filter);
     
     if (filter === 'all') {
-      // Show all results when "All" is selected
       setSearchResults(allResults);
       if (allResults.length > 0) {
         setSearchMessage(`Found ${allResults.length} result(s)`);
       }
     } else {
-      // Filter results by matching risk level
       const filtered = allResults.filter(restaurant => 
         restaurant.risk.riskLevel.toLowerCase() === filter.toLowerCase()
       );
       
       setSearchResults(filtered);
       
-      // Update message to show filtered count
       if (filtered.length === 0 && allResults.length > 0) {
         setSearchMessage(`No ${filter} risk restaurants found. Showing 0 of ${allResults.length} results.`);
       } else {
@@ -211,8 +212,7 @@ export default function Home() {
     }
   };
 
-  // ===== CLEAR SEARCH HANDLER (NEW) =====
-  // Resets all search-related state
+  // ===== CLEAR SEARCH HANDLER =====
   const clearSearch = (): void => {
     setSearchQuery('');
     setSearchResults([]);
@@ -245,7 +245,7 @@ export default function Home() {
               Add Restaurant
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 min-h-[220px]">
               
               {/* Restaurant Name Input */}
               <div>
@@ -262,6 +262,7 @@ export default function Home() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Joe's Diner"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 placeholder:text-gray-400"
+                  required
                 />
               </div>
 
@@ -278,6 +279,7 @@ export default function Home() {
                   value={oilType}
                   onChange={(e) => setOilType(e.target.value as OilType)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors bg-white text-gray-900"
+                  required
                 >
                   <option value="">Select an oil type...</option>
                   {OIL_TYPES.map((oil) => (
@@ -299,44 +301,41 @@ export default function Home() {
 
               {/* Success/Error Message */}
               {submittedMessage && (
-                <div className={`p-3 rounded-lg text-sm ${
-                  submittedMessage.includes('successfully')
-                    ? 'bg-green-50 text-green-800 border border-green-200'
-                    : 'bg-red-50 text-red-800 border border-red-200'
-                }`}>
-                  {submittedMessage}
-                </div>
-              )}
+  <div className={`p-3 rounded-lg text-sm animate-fade-out ${
+    submittedMessage.includes('❌')
+      ? 'bg-red-50 text-red-800 border border-red-200'
+      : 'bg-green-50 text-green-800 border border-green-200'
+  }`}>
+    {submittedMessage}
+  </div>
+)}
             </form>
           </div>
 
-          {/* ===== RIGHT COLUMN: SEARCH SECTION (ENHANCED) ===== */}
+          {/* ===== RIGHT COLUMN: SEARCH SECTION ===== */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Search Restaurants
             </h2>
             
-            {/* ===== REAL-TIME SEARCH INPUT (NEW) ===== */}
-            {/* No form wrapper - searches as you type */}
+            {/* Real-Time Search Input */}
             <div className="mb-4">
               <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => handleRealtimeSearch(e.target.value)} // ← NEW: Calls real-time handler
+                  onChange={(e) => handleRealtimeSearch(e.target.value)}
                   placeholder="Search by restaurant name..."
                   className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 placeholder:text-gray-400"
                 />
                 
-                {/* ===== CLEAR BUTTON (NEW) ===== */}
-                {/* X button appears when there's text in the search box */}
+                {/* Clear Button */}
                 {searchQuery && (
                   <button
                     onClick={clearSearch}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                     aria-label="Clear search"
                   >
-                    {/* X icon SVG */}
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -344,15 +343,13 @@ export default function Home() {
                 )}
               </div>
               
-              {/* ===== LOADING INDICATOR (NEW) ===== */}
-              {/* Shows "Searching..." while API call is in progress */}
+              {/* Loading Indicator */}
               {isSearching && (
                 <p className="text-sm text-blue-600 mt-2">Searching...</p>
               )}
             </div>
             
-            {/* ===== RISK FILTER DROPDOWN (NEW) ===== */}
-            {/* Only shows when there are search results to filter */}
+            {/* Risk Filter Dropdown */}
             {allResults.length > 0 && (
               <div className="mb-4">
                 <label htmlFor="riskFilter" className="block text-sm font-medium text-gray-700 mb-2">
@@ -361,7 +358,7 @@ export default function Home() {
                 <select
                   id="riskFilter"
                   value={riskFilter}
-                  onChange={(e) => handleRiskFilterChange(e.target.value)} // ← NEW: Filters results
+                  onChange={(e) => handleRiskFilterChange(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors bg-white text-gray-900"
                 >
                   <option value="all">All Risk Levels</option>
@@ -372,8 +369,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* ===== SEARCH MESSAGE ===== */}
-            {/* Shows result counts, errors, or info messages */}
+            {/* Search Message */}
             {searchMessage && (
               <div className={`mb-4 p-3 rounded-lg text-sm ${
                 searchMessage.includes('Error')
@@ -384,43 +380,69 @@ export default function Home() {
               </div>
             )}
             
-            {/* ===== SEARCH RESULTS LIST ===== */}
+            {/* Search Results List */}
             <div className="space-y-3">
               {searchResults.length > 0 ? (
-                // Map through filtered results and display cards
                 searchResults.map((restaurant) => (
                   <div
                     key={restaurant._id}
                     className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                   >
-                    {/* Restaurant Name */}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {restaurant.name || 'Unnamed Restaurant'}
-                    </h3>
+                    {/* ===== RESTAURANT NAME + VERIFICATION BADGE ===== */}
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {restaurant.name || 'Unnamed Restaurant'}
+                      </h3>
+                      {restaurant.verified ? (
+                        <span className="ml-2 text-green-600 font-bold text-sm">✅ Verified</span>
+                      ) : (
+                        <span className="ml-2 text-yellow-600 text-sm">⚠️ Pending</span>
+                      )}
+                    </div>
                     
-                    {/* Oil Type */}
+                    {/* ===== OIL TYPE ===== */}
                     <p className="text-sm text-gray-600 mb-2">
                       Cooking Oil: <span className="font-medium">{restaurant.oilType}</span>
                     </p>
                     
-                    {/* Submitted Date */}
+                    {/* ===== VERIFICATION PROGRESS (if not verified) ===== */}
+                    {!restaurant.verified && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-3">
+                        <p className="text-sm text-yellow-800">
+                          🗳️ {restaurant.verificationStatus}
+                        </p>
+                        <div className="w-full bg-yellow-200 rounded h-2 mt-1">
+                          <div 
+                            className="bg-yellow-500 h-2 rounded transition-all"
+                            style={{ width: `${(restaurant.voteCount! / 2) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* ===== SUBMITTED DATE ===== */}
                     <p className="text-xs text-gray-500 mb-3">
                       Added {formatDate(restaurant.submittedDate)}
                     </p>
                     
-                    {/* Risk Badge */}
+                    {/* ===== RISK BADGE ===== */}
                     <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getRiskClasses(restaurant.risk.color)}`}>
                       {restaurant.risk.riskLevel.toUpperCase()} RISK
                     </div>
                     
-                    {/* Risk Message */}
+                    {/* ===== RISK MESSAGE ===== */}
                     <p className="text-sm text-gray-600 mt-2">
                       {restaurant.risk.message}
+                    </p>
+                    
+                    {/* ===== VOTE COUNT ===== */}
+                    <p className="text-xs text-gray-500 mt-2">
+                      {restaurant.voteCount} {restaurant.voteCount === 1 ? 'vote' : 'votes'}
                     </p>
                   </div>
                 ))
               ) : (
-                // Empty state - shows when no results
+                // Empty state
                 <div className="text-center py-8 text-gray-500">
                   {searchQuery
                     ? 'No results found. Try a different search term.'
