@@ -1,6 +1,6 @@
-# Allergy Log
+# Restaurant Allergy Tracker
 
-A Next.js application for tracking restaurant cooking oils and assessing peanut allergy risk. The app lets users submit restaurants with their oil type, then search with real-time filtering and risk badges to help make safer dining decisions.
+A full-stack Next.js application for tracking restaurant cooking oils and assessing peanut allergy risk. The app leverages community verification and rate limiting to ensure data accuracy and prevent abuse.
 
 ## Table of Contents
 - [Features](#features)
@@ -9,9 +9,11 @@ A Next.js application for tracking restaurant cooking oils and assessing peanut 
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-  - [Environment Variables](#environment-variables)
-  - [Run the App](#run-the-app)
+  - [Running Locally](#running-locally)
+- [Docker](#docker)
 - [API Reference](#api-reference)
+- [Testing](#testing)
+- [Security Features](#security-features)
 - [Scripts](#scripts)
 - [Deployment](#deployment)
 - [Roadmap](#roadmap)
@@ -19,83 +21,170 @@ A Next.js application for tracking restaurant cooking oils and assessing peanut 
 - [License](#license)
 
 ## Features
-- Add restaurants with the cooking oil type used.
-- Real-time search with debounce and clear control.
-- Risk assessment based on oil type (high/medium/low/unknown) with color-coded badges.
-- MongoDB-backed persistence via Mongoose.
+
+### Core Functionality
+- **Submit Restaurants:** Add restaurants with their cooking oil type
+- **Real-Time Search:** Debounced search with instant results and risk filtering
+- **Risk Assessment:** Color-coded badges (High/Medium/Low/Unknown) based on oil type
+- **Data Persistence:** MongoDB-backed storage with data that survives restarts
+
+### Community Trust & Security
+- **Crowdsourced Verification:** Restaurants require 2 matching submissions from different IPs to be marked as "Community Verified"
+- **Rate Limiting:** Maximum 5 submissions per IP per hour to prevent spam
+- **Duplicate Prevention:** Same IP cannot vote for the same restaurant twice
+- **Vote Tracking:** Displays verification progress with visual indicators
+
+### User Experience
+- **Responsive Design:** Mobile-friendly interface with Tailwind CSS
+- **Live Feedback:** Success/error messages with smooth fade animations
+- **Verification Badges:** Visual indicators showing verified (✅) vs pending (⚠️) status
+- **Progress Bars:** Real-time verification progress display
+- **Clear Button:** Quick search reset with X button
 
 ## Tech Stack
-- **Framework:** Next.js (App Router)
-- **UI:** React + Tailwind CSS
-- **Database:** MongoDB + Mongoose
-- **Language:** TypeScript (frontend) + JavaScript (API/routes)
+
+### Frontend
+- **Framework:** Next.js 16.1.6 (App Router)
+- **UI Library:** React 19.2.3
+- **Styling:** Tailwind CSS 4
+- **Language:** TypeScript
+
+### Backend
+- **Runtime:** Node.js 25.x
+- **Framework:** Next.js API Routes
+- **Database:** MongoDB 7.0 (Alpine)
+- **ODM:** Mongoose 9.1.5
+
+### DevOps
+- **Containerization:** Docker + Docker Compose
+- **Production Deployment:** Vercel (with MongoDB Atlas)
+
 
 ## Project Structure
 ```
 app/
   api/
-    restaurants/          # Create restaurant entries
-    restaurants/search/   # Search + risk assessment
-  page.tsx                # UI: form + search experience
+    restaurants/          # POST: Add restaurant with verification
+    restaurants/search/   # GET: Search with risk assessment
+  layout.tsx              # Root layout
+  page.tsx                # Main UI (form + search)
+  not-found.tsx           # 404 redirect
 lib/
-  mongodb.js              # MongoDB connection
-  riskAssessment.js       # Risk scoring helpers
+  mongodb.js              # Mongoose connection (cached for serverless)
+  riskAssessment.js       # Risk level calculation logic
 models/
-  Restaurant.js           # Mongoose schema
+  Restaurant.js           # Mongoose schema with verification tracking
+Dockerfile                # Multi-stage Next.js build
+docker-compose.yml        # MongoDB + Next.js orchestration
+.dockerignore             # Exclude secrets from Docker image
+.env.example              # Environment variables template
+.env.local                # Local secrets (NOT committed)
+package.json
 ```
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ (recommended)
-- MongoDB instance (local or cloud)
+- Node.js 25.x or later
+- npm or yarn
+- MongoDB instance (local or MongoDB Atlas)
 
 ### Installation
+
+1. **Clone and install:**
 ```bash
+git clone <repository-url>
+cd allergy-log
 npm install
 ```
 
-### Environment Variables
-Create a `.env.local` file in the project root:
-
+2. **Set up environment variables:**
 ```bash
-MONGODB_URI="mongodb+srv://<user>:<password>@<cluster>/<db>?retryWrites=true&w=majority"
+cp .env.example .env.local
 ```
 
-> The application expects a MongoDB database named `restaurant-tracker` by default. You can adjust this in `lib/mongodb.js`.
+3. **Configure `.env.local`:**
+```bash
+# MongoDB Atlas connection string
+MONGODB_URI="mongodb+srv://<username>:<password>@<cluster>.mongodb.net/restaurant-tracker"
 
-### Run the App
+# Node environment
+NODE_ENV=development
+
+# API URL (for development)
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+### Running Locally
+
 ```bash
 npm run dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Docker (new)
+**The app will:**
+- Connect to your MongoDB instance via `MONGODB_URI`
+- Enable hot-reload for code changes
+- Show detailed error messages
 
-This project includes a `Dockerfile` and `docker-compose.yml` for containerized development and deployment. Use Docker to run the app and (optionally) a MongoDB service locally without installing Node or MongoDB on your host.
+## Docker
 
-- Build the image and run with Docker:
+This project includes a `Dockerfile` and `docker-compose.yml` for containerized development and deployment.
+
+### Build and Run with Docker Compose (Recommended)
+
+```bash
+docker compose build
+docker compose up
+```
+
+Visit [http://localhost:3000](http://localhost:3000)
+
+### Manual Docker Build and Run
 
 ```bash
 docker build -t allergy-log:local .
 docker run --env MONGODB_URI="${MONGODB_URI}" -p 3000:3000 allergy-log:local
 ```
 
-- Start with Docker Compose (recommended for local development):
+### Stop and Clean Up
 
 ```bash
-docker-compose up --build
+# Stop containers (keeps data)
+docker compose down
+
+# Stop and remove all data
+docker compose down -v
+
+# Remove Docker image
+docker image rm allergy-log-app
+
+# Free port 3000
+lsof -i :3000
 ```
 
-By default the app listens on port `3000`. When using `docker-compose`, the compose file will map ports and provide a MongoDB service if configured.
+### Using MongoDB Atlas with Docker
+
+To use a real MongoDB Atlas instance:
+1. Update `MONGODB_URI` in `docker-compose.yml`
+2. Ensure IP whitelist includes your Docker host
+3. Run: `docker compose up`
+
+### Multi-Stage Build
+
+The `Dockerfile` uses a two-stage build:
+1. **Builder stage:** Compiles TypeScript, builds Next.js app
+2. **Runtime stage:** Minimal image with only production dependencies
+
+This reduces final image size and improves security.
 
 ## API Reference
 
-### Create a restaurant
-**POST** `/api/restaurants`
+### POST `/api/restaurants`
+**Add a new restaurant or vote on verification**
 
-Request body:
+Request:
 ```json
 {
   "name": "Joe's Diner",
@@ -103,53 +192,195 @@ Request body:
 }
 ```
 
-### Search restaurants
-**GET** `/api/restaurants/search?name=<query>`
-
-Returns restaurants sorted by most recent submission and includes a `risk` object for each entry.
-
-## Scripts
-```bash
-npm run dev     # Start development server
-npm run build   # Build for production
-npm run start   # Start production server
-npm run lint    # Run ESLint
+Response (new restaurant):
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "...",
+    "name": "joe's diner",
+    "votes": [{ "oilType": "Canola", "ipAddress": "192.168.1.1", "timestamp": "..." }],
+    "verified": false,
+    "consensusOilType": null
+  },
+  "message": "Restaurant submitted! ⏳ Waiting for 1 more verification from someone else to confirm."
+}
 ```
 
-Docker-related scripts (optional):
+Response (verification):
+```json
+{
+  "success": true,
+  "data": {
+    "verified": true,
+    "consensusOilType": "Canola",
+    "votes": [...]
+  },
+  "message": "✅ Community Verified! Canola oil confirmed by 2 people"
+}
+```
+
+Error: Rate Limit (429)
+```json
+{
+  "success": false,
+  "error": "Too many submissions. Please try again later. (Limit: 5 per hour)"
+}
+```
+
+Error: Duplicate Vote (400)
+```json
+{
+  "success": false,
+  "error": "You have already submitted this restaurant with this oil type"
+}
+```
+
+### GET `/api/restaurants/search?name=<query>`
+**Search restaurants with risk assessment**
+
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "name": "joe's diner",
+      "oilType": "Canola",
+      "verified": true,
+      "voteCount": 2,
+      "verificationStatus": "Community Verified ✅",
+      "risk": {
+        "riskLevel": "Low",
+        "message": "Low Risk - Restaurant uses oils with lower allergenic potential.",
+        "color": "green"
+      }
+    }
+  ],
+  "count": 1
+}
+```
+
+## Testing
+
+### Manual Testing Checklist
+
+| Test | Steps | Expected |
+|------|-------|----------|
+| **Add Restaurant** | Submit form → See success message | Green message, form clears after 5s |
+| **Unverified Display** | Search new restaurant | Shows ⚠️ Pending, progress 50%, "Needs 1 more vote" |
+| **Verification** | Add same restaurant from different IP | Auto-marks verified ✅, 100% progress |
+| **Duplicate Prevention** | Add same restaurant/oil again | Red error: "Already submitted" |
+| **Rate Limiting** | Add 6 restaurants in quick succession | 6th fails: "Too many submissions" |
+| **Risk Levels** | Search different oil types | Colors match: Peanut (red), Canola (green) |
+| **Data Persistence** | Restart server while running locally | All restaurants still searchable |
+| **Docker Isolation** | Verify secrets in Docker | `docker compose exec app cat .env` → "No such file" |
+
+### Running Tests
 
 ```bash
-# build image: docker build -t allergy-log:local .
-# run compose: docker-compose up --build
-# detach: docker-compose up -d --build
-# stop: docker-compose down
+# Local: npm run dev
+# Docker: docker compose up
+# Then open http://localhost:3000 and follow checklist above
+```
+
+## Security Features
+
+### Authentication & Authorization
+- **IP-Based Rate Limiting:** 5 submissions per IP per hour
+- **Duplicate Vote Prevention:** Same IP + oil type = rejected
+- **Verification System:** Requires consensus from different IPs
+
+### Data Protection
+- **Environment Variables:** Secrets stored in `.env.local` (never committed)
+- **Docker Security:**
+  - `.dockerignore` excludes `.env` files from image
+  - Multi-stage build removes dev dependencies
+  - Health checks ensure service readiness
+- **MongoDB:**
+  - IP whitelist enforced (Atlas)
+  - Authentication required
+  - Data persisted in volumes
+
+### Validation
+- **Input Validation:** Name (2+ chars), oil type (enum)
+- **Error Handling:** Graceful failures with user-friendly messages
+- **Rate Limiting:** Prevents resource exhaustion
+
+## Scripts
+
+```bash
+# Development
+npm run dev           # Start dev server (hot reload)
+npm run build         # Build for production
+npm run start         # Run production server
+npm run lint          # Run ESLint
+
+# Docker
+docker compose build  # Build image
+docker compose up     # Start services
+docker compose down   # Stop services
+docker compose logs   # View logs
 ```
 
 ## Deployment
-The application can be deployed on any platform that supports Next.js (e.g., Vercel, Render, or a custom Node.js server). It can also be containerized using the provided `Dockerfile` and `docker-compose.yml` for platforms that accept Docker images (e.g., Docker Hub, AWS ECS, Azure Container Instances).
 
-When deploying with Docker, ensure `MONGODB_URI` is provided as an environment variable to the container (or defined in your orchestration platform's secret manager).
+### Vercel (Recommended)
+
+1. **Push to GitHub**
+```bash
+git add .
+git commit -m "feat: add verification and rate limiting"
+git push origin main
+```
+
+2. **Deploy on Vercel**
+   - Connect GitHub repo to Vercel
+   - Set environment variable: `MONGODB_URI` (MongoDB Atlas connection)
+   - Deploy (automatic on push)
+
+3. **Verify**
+   - Visit your Vercel deployment URL
+   - Test all features
+
+### Docker (Any Cloud)
+
+1. **Build and push to registry**
+```bash
+docker build -t <username>/allergy-log:latest .
+docker push <username>/allergy-log:latest
+```
+
+2. **Deploy** (e.g., AWS ECS, Google Cloud Run)
+   - Use image: `<username>/allergy-log:latest`
+   - Set env: `MONGODB_URI`
+   - Expose port: `3000`
 
 ## Roadmap
-- [x] Restaurant field validation
-- [ ] Crowd sourced verification for restaurant accuracy (In Progress)
-- [ ] Rate limiting for security (In Progress)
-- [ ] UI component library setup (shadcn/ui).
-```bash
-npx shadcn@latest init
-```
-Documentation: https://ui.shadcn.com/docs/installation/next
 
+- [x] Core submission and search functionality
+- [x] Risk assessment with color-coded badges
+- [x] **Crowdsourced verification system** (2-vote consensus)
+- [x] **Rate limiting** (5 per hour per IP)
+- [x] **Duplicate vote prevention**
+- [x] Docker containerization with health checks
+- [ ] User accounts and authentication
+- [ ] Admin dashboard for moderation
+- [ ] Advanced filtering (by cuisine, location)
+- [ ] Email notifications for verified restaurants
+- [ ] UI component library setup (shadcn/ui)
 
 ## Contributing
-1. Fork the repository.
-2. Create a feature branch: `git checkout -b feature/my-feature`.
-3. Commit your changes: `git commit -m "Add my feature"`.
-4. Push to the branch: `git push origin feature/my-feature`.
-5. Open a pull request.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m "feat: describe your feature"`
+4. Push to the branch: `git push origin feature/your-feature`
+5. Open a pull request
 
 ## License
-This project is licensed under the MIT License....
+
+MIT License - see LICENSE file for details
 
 
 
