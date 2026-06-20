@@ -131,12 +131,15 @@ The application can be deployed on any platform that supports Next.js (e.g., Ver
 When deploying with Docker, ensure `MONGODB_URI` is provided as an environment variable to the container (or defined in your orchestration platform's secret manager).
 
 ## Roadmap
-- UI component library setup (shadcn/ui).
+- [x] Restaurant field validation
+- [ ] Crowd sourced verification for restaurant accuracy (In Progress)
+- [ ] Rate limiting for security (In Progress)
+- [ ] UI component library setup (shadcn/ui).
 ```bash
 npx shadcn@latest init
 ```
 Documentation: https://ui.shadcn.com/docs/installation/next
-- Restaurant field validation
+
 
 ## Contributing
 1. Fork the repository.
